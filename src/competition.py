@@ -31,6 +31,16 @@ class GameState:
 
         return score
 
+    def __str__(self):
+        rows = []
+        firstLine = self.stateLines.get(MatrixColumn.LEFT_COLUMN)
+        secondLine = self.stateLines.get(MatrixColumn.MIDDLE_COLUMN)
+        thirdLine = self.stateLines.get(MatrixColumn.RIGHT_COLUMN)
+        for row in range(0, 3):
+            rows.append("%d | %d | %d" % (firstLine[row] if row < len(firstLine) else 0, secondLine[row] if row < len(secondLine) else 0,
+                                          thirdLine[row] if row < len(thirdLine) else 0))
+        return "\n".join(rows)
+
 
 class Participant:
     def __init__(self, agent: Agent):
@@ -68,7 +78,6 @@ class Competition:
         self.participants: List[Participant] = []
 
     def startCompetition(self):
-
         for game in range(0, self.numberOfGames):
             # init game
             for participant in self.participants:
@@ -96,4 +105,8 @@ class Competition:
 
     def registerParticipant(self, agent: Agent):
         self.participants.append(Participant(agent))
+
+    def printResult(self):
+        for participant in self.participants:
+            print(f"{participant.agent.agentName}: {participant.getScore()}")
 
