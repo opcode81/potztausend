@@ -1,7 +1,7 @@
 import random
 from typing import List
 
-from agents import Agent, MatrixColumn
+from src.agents import MatrixColumn, Agent
 
 
 class GameState:
@@ -101,7 +101,8 @@ class Competition:
                     bestResult = result
                     bestParticipant = participant
 
-            bestParticipant.updateScore(5)
+            if bestParticipant:
+                bestParticipant.updateScore(5)
 
     def registerParticipant(self, agent: Agent):
         self.participants.append(Participant(agent))

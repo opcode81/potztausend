@@ -1,6 +1,6 @@
 import random
 
-from agent import Agent, MatrixColumn
+from .agent import Agent, MatrixColumn
 
 
 class RandomAgent(Agent):
