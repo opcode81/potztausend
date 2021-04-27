@@ -1,7 +1,7 @@
 import random
 from typing import List
 
-from src.agent import Agent, MatrixColumn
+from agents import Agent, MatrixColumn
 
 
 class GameState:
