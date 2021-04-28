@@ -1,5 +1,5 @@
 from src import Competition
-from src.agents import RandomAgent, CalculatorAgent
+from src.agents import RandomAgent, CalculatorAgent, QLearningAgent
 from time import time
 
 if __name__ == '__main__':
@@ -8,8 +8,10 @@ if __name__ == '__main__':
 
     randy = RandomAgent()
     sheldon = CalculatorAgent()
+    paul = QLearningAgent()
     competition.registerParticipant(randy)
     competition.registerParticipant(sheldon)
+    competition.registerParticipant(paul)
 
     start_time = time()
     competition.startCompetition()
