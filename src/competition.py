@@ -94,13 +94,13 @@ class Competition:
         self.participants: List[Participant] = []
 
     def startCompetition(self):
-        for game in range(0, self.numberOfGames):
+        for game in range(self.numberOfGames):
             # init game
             for participant in self.participants:
                 participant.startGame()
 
             # play game
-            for gameRound in range(0, 9):
+            for gameRound in range(9):
                 diceValue = random.randint(1, 6)
 
                 for participant in self.participants:
