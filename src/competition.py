@@ -1,8 +1,10 @@
 import random
 from typing import List
+import matplotlib.pyplot as plt
 
 from src.agents import MatrixColumn, Agent
-
+epsilon = 1e-10
+e_inf = 1.0/epsilon
 
 class GameState:
     def __init__(self):
@@ -27,7 +29,7 @@ class GameState:
         score += sum(self.stateLines[MatrixColumn.RIGHT_COLUMN])
 
         if score > 1000:
-            return -1000
+            return -score
 
         return score
 
@@ -48,6 +50,7 @@ class Participant:
         self.state = GameState()
         self.invalid = False
         self.score = 0
+        self.score_history = []
 
     def startGame(self):
         self.state = GameState()
@@ -70,6 +73,7 @@ class Participant:
 
     def updateScore(self, score: int):
         self.score += score
+        self.score_history.append(abs(self.getGameResult()))
 
 
 class Competition:
@@ -95,7 +99,7 @@ class Competition:
             bestParticipant = None
             for participant in self.participants:
                 result = participant.getGameResult()
-                if result == -1000:
+                if result < 0:
                     participant.updateScore(-3)
                 elif result > bestResult:
                     bestResult = result
@@ -108,6 +112,23 @@ class Competition:
         self.participants.append(Participant(agent))
 
     def printResult(self):
-        for participant in self.participants:
-            print(f"{participant.agent.agentName}: {participant.getScore()}")
+        self.participants = sorted(self.participants, key=lambda x: x.getScore() - x.invalid*e_inf, reverse=True)
+        for rank, participant in enumerate(self.participants):
+            if participant.invalid:
+                print(f"\t {participant.agent.agentName}: disqualified")
+            else:
+                print(f"{rank+1}\t {participant.agent.agentName}: {participant.getScore()}")
 
+    def plot_score_history(self):
+        plt.figure()
+        for participant in self.participants:
+            plt.plot(participant.score_history, label=participant.agent.agentName)
+        plt.legend()
+        plt.show()
+
+    def plot_histogram(self):
+        plt.figure()
+        for participant in self.participants:
+            plt.hist(participant.score_history, label=participant.agent.agentName, alpha=0.5, bins=20)
+        plt.legend()
+        plt.show()
