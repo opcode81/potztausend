@@ -1,6 +1,7 @@
 import random
 from typing import List
 import matplotlib.pyplot as plt
+import numpy as np
 
 from src.agents import MatrixColumn, Agent
 epsilon = 1e-10
@@ -27,10 +28,6 @@ class GameState:
         score = sum(self.stateLines[MatrixColumn.LEFT_COLUMN]) * 100
         score += sum(self.stateLines[MatrixColumn.MIDDLE_COLUMN]) * 10
         score += sum(self.stateLines[MatrixColumn.RIGHT_COLUMN])
-
-        if score > 1000:
-            return -score
-
         return score
 
     def __str__(self):
@@ -51,6 +48,7 @@ class Participant:
         self.invalid = False
         self.score = 0
         self.score_history = []
+        self.game_stats = {'games_won': 0, 'games_lost': 0, 'overbought': 0}
 
     def startGame(self):
         self.state = GameState()
@@ -71,10 +69,24 @@ class Participant:
     def getScore(self) -> int:
         return self.score
 
-    def updateScore(self, score: int):
-        self.score += score
+    def finishGame(self, rank: int):
+        """Finish game. Assigns score according to final rank.
+        Parameters
+        ----------
+        rank : int
+            rank == -1 if overbought
+            rank == 1 if win
+            rank > 1 else
+        """
         self.score_history.append(abs(self.getGameResult()))
-
+        if rank == 1:
+            self.score += 5
+            self.game_stats['games_won'] += 1 
+        elif rank == -1:
+            self.score += -3
+            self.game_stats['overbought'] += 1
+        else:
+            self.game_stats['games_lost'] += 1
 
 class Competition:
     def __init__(self, numberOfGames: int = 10000):
@@ -95,18 +107,16 @@ class Competition:
                     participant.doMove(diceValue)
 
             # evaluate game
-            bestResult = 0
-            bestParticipant = None
+            ranking = []
             for participant in self.participants:
                 result = participant.getGameResult()
-                if result < 0:
-                    participant.updateScore(-3)
-                elif result > bestResult:
-                    bestResult = result
-                    bestParticipant = participant
-
-            if bestParticipant:
-                bestParticipant.updateScore(5)
+                if result > 1000:
+                    participant.finishGame(rank=-1)
+                else:
+                    ranking.append((participant, result))
+            ranking = sorted(ranking, key=lambda x: x[1], reverse=True)
+            for rank, (participant, _) in enumerate(ranking):
+                participant.finishGame(rank+1)
 
     def registerParticipant(self, agent: Agent):
         self.participants.append(Participant(agent))
@@ -117,7 +127,7 @@ class Competition:
             if participant.invalid:
                 print(f"\t {participant.agent.agentName}: disqualified")
             else:
-                print(f"{rank+1}\t {participant.agent.agentName}: {participant.getScore()}")
+                print(f"{rank+1}\t {participant.agent.agentName}: {participant.getScore()}\tgames won: {participant.game_stats['games_won']}, games lost: {participant.game_stats['games_lost']}, overbought: {participant.game_stats['overbought']}")
 
     def plot_score_history(self):
         plt.figure()
@@ -129,6 +139,10 @@ class Competition:
     def plot_histogram(self):
         plt.figure()
         for participant in self.participants:
-            plt.hist(participant.score_history, label=participant.agent.agentName, alpha=0.5, bins=20)
+            plt.hist(participant.score_history, 
+                label=participant.agent.agentName, 
+                alpha=0.5, 
+                bins=np.linspace(329, 1897, 15)) # aligns bin bound on 1000
+        plt.vlines(x=1000, ymin=0, ymax=plt.ylim()[1], colors='black')
         plt.legend()
         plt.show()
