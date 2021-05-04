@@ -1,3 +1,4 @@
+import logging
 import random
 from typing import List
 import matplotlib.pyplot as plt
@@ -6,6 +7,8 @@ import numpy as np
 from src.agents import MatrixColumn, Agent
 epsilon = 1e-10
 e_inf = 1.0/epsilon
+
+log = logging.getLogger(__name__)
 
 class GameState:
     def __init__(self):
@@ -89,19 +92,21 @@ class Participant:
             self.game_stats['games_lost'] += 1
 
 class Competition:
-    def __init__(self, numberOfGames: int = 10000):
+    def __init__(self, numberOfGames: int = 10000, randomSeed=42):
         self.numberOfGames = numberOfGames
         self.participants: List[Participant] = []
+        self.rand = random.Random(randomSeed)
 
     def startCompetition(self):
-        for game in range(self.numberOfGames):
+        for i, game in enumerate(range(self.numberOfGames), start=1):
+            log.info(f"Game #{i}")
             # init game
             for participant in self.participants:
                 participant.startGame()
 
             # play game
             for gameRound in range(9):
-                diceValue = random.randint(1, 6)
+                diceValue = self.rand.randint(1, 6)
 
                 for participant in self.participants:
                     participant.doMove(diceValue)
