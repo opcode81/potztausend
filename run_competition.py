@@ -15,7 +15,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(levelname)-5s %(asctime)-15s %(name)s:%(funcName)s - %(message)s', stream=sys.stdout)
     logging.getLogger("matplotlib").setLevel(logging.INFO)
 
-    num_games = 1000
+    num_games = 10000
     competition = Competition(num_games)
 
     randy = RandomAgent()
