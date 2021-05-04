@@ -11,6 +11,9 @@ e_inf = 1.0/epsilon
 
 log = logging.getLogger(__name__)
 
+OVERSHOOT_SCORE = -1000
+
+
 class GameState:
     def __init__(self):
         self.stateLines = {
@@ -28,11 +31,11 @@ class GameState:
     def performAction(self, action: MatrixColumn, diceValue: int):
         self.stateLines.get(action).append(diceValue)
 
-    def calcScore(self) -> int:
-        score = sum(self.stateLines[MatrixColumn.LEFT_COLUMN]) * 100
-        score += sum(self.stateLines[MatrixColumn.MIDDLE_COLUMN]) * 10
-        score += sum(self.stateLines[MatrixColumn.RIGHT_COLUMN])
-        return score
+    def calcSum(self) -> int:
+        s = sum(self.stateLines[MatrixColumn.LEFT_COLUMN]) * 100
+        s += sum(self.stateLines[MatrixColumn.MIDDLE_COLUMN]) * 10
+        s += sum(self.stateLines[MatrixColumn.RIGHT_COLUMN])
+        return s
 
     def __str__(self):
         rows = []
@@ -50,9 +53,9 @@ class Participant:
         self.agent = agent
         self.state = GameState()
         self.invalid = False
-        self.score = 0
-        self.score_history = []
-        self.game_stats = {'games_won': 0, 'games_lost': 0, 'overbought': 0}
+        self.points = 0
+        self.sum_history = []
+        self.game_stats = {'games_won': 0, 'games_lost': 0, 'failed': 0}
 
     def startGame(self):
         self.state = GameState()
@@ -65,13 +68,19 @@ class Participant:
                 self.state.performAction(action, diceValue)
             else:
                 self.invalid = True
-                self.score = 0
+                self.points = 0
 
     def getGameResult(self) -> int:
-        return self.state.calcScore()
+        return self.state.calcSum()
 
-    def getScore(self) -> int:
-        return self.score
+    def getPoints(self) -> int:
+        return self.points
+
+    def getScores(self) -> List[float]:
+        return [OVERSHOOT_SCORE if s > 1000 else s for s in self.sum_history]
+
+    def getMeanScore(self) -> float:
+        return np.mean(self.getScores())
 
     def finishGame(self, rank: int):
         """Finish game. Assigns score according to final rank.
@@ -82,15 +91,16 @@ class Participant:
             rank == 1 if win
             rank > 1 else
         """
-        self.score_history.append(abs(self.getGameResult()))
-        if rank == 1:
-            self.score += 5
-            self.game_stats['games_won'] += 1 
-        elif rank == -1:
-            self.score += -3
+        self.sum_history.append(abs(self.getGameResult()))
+        if rank == -1:
+            self.points += -3
             self.game_stats['failed'] += 1
         else:
-            self.game_stats['games_lost'] += 1
+            self.points += {1: 5, 2: 3, 3: 1}.get(rank, 0)
+            if rank == 1:
+                self.game_stats['games_won'] += 1
+            else:
+                self.game_stats['games_lost'] += 1
 
 class Competition:
     def __init__(self, numberOfGames: int = 10000, randomSeed=42):
@@ -133,25 +143,26 @@ class Competition:
     def registerParticipant(self, agent: Agent):
         self.participants.append(Participant(agent))
 
-    def printResult(self):
-        self.participants = sorted(self.participants, key=lambda x: x.getScore() - x.invalid*e_inf, reverse=True)
-        for rank, participant in enumerate(self.participants):
+    def printLeagueResult(self):
+        self.participants = sorted(self.participants, key=lambda x: x.getPoints() - x.invalid * e_inf, reverse=True)
+        print("League results:")
+        for rank, participant in enumerate(self.participants, start=1):
             if participant.invalid:
                 print(f"\t {participant.agent.agentName}: disqualified")
             else:
-                print(f"{rank+1}\t {participant.agent.agentName}: {participant.getScore()}\tgames won: {participant.game_stats['games_won']}, games lost: {participant.game_stats['games_lost']}, overbought: {participant.game_stats['overbought']}")
+                print(f"Rank #{rank}\t {participant.agent.agentName:10s} {participant.getPoints():-6d} points\tgames won: {participant.game_stats['games_won']}, failed: {participant.game_stats['failed']}")
 
     def plot_score_history(self):
         plt.figure()
         for participant in self.participants:
-            plt.plot(participant.score_history, label=participant.agent.agentName)
+            plt.plot(participant.sum_history, label=participant.agent.agentName)
         plt.legend()
         plt.show()
 
     def plot_histogram(self):
         plt.figure()
         for participant in self.participants:
-            plt.hist(participant.score_history, 
+            plt.hist(participant.sum_history,
                 label=participant.agent.agentName, 
                 alpha=0.5, 
                 bins=np.linspace(329, 1897, 15)) # aligns bin bound on 1000
@@ -161,5 +172,5 @@ class Competition:
 
     def printMeanScores(self):
         print("Mean scores achieved by the agents:")
-        mean_scores = {p.agent.agentName: np.mean([-1000 if s > 1000 else s for s in p.score_history]) for p in self.participants}
-        pprint(mean_scores, width=1)
+        for rank, p in enumerate(sorted(self.participants, key=lambda x: x.getMeanScore(), reverse=True), start=1):
+            print(f"#{rank}: {p.agent.agentName:10s} {p.getMeanScore()}")

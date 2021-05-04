@@ -35,7 +35,7 @@ if __name__ == '__main__':
     competition.startCompetition()
     time_used = time() - start_time
     print(f'competition took {time_used} seconds. On average this is {time_used / num_games} seconds.')
-    competition.printResult()
+    competition.printLeagueResult()
     # competition.plot_score_history()
     competition.plot_histogram()
     competition.printMeanScores()
