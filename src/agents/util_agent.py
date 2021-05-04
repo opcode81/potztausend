@@ -15,6 +15,7 @@ class UtilAgent(Agent):
     """
     FACTORS = np.array([100, 10, 1])
     DICE_VALUES = [1, 2, 3, 4, 5, 6]
+    OVERSHOOT_UTIL = competition.OVERSHOOT_SCORE
 
     def __init__(self):
         super().__init__("Jeremy")
@@ -48,7 +49,7 @@ class UtilAgent(Agent):
     def _eval_utility(self, occupancy: Tuple[int, int, int], util) -> float:
         gap = 1000 - util
         if gap < 0:
-            return competition.OVERSHOOT_SCORE
+            return self.OVERSHOOT_UTIL
 
         occupancy = np.array(occupancy)
         available_columns = np.where(occupancy < 3)[0]
@@ -58,11 +59,11 @@ class UtilAgent(Agent):
 
         lower_bound = np.dot((3-occupancy), self.FACTORS)
         if gap < lower_bound:
-            return competition.OVERSHOOT_SCORE
+            return self.OVERSHOOT_UTIL
 
         next_dice_value_utils = []
         for dice_value in self.DICE_VALUES:
-            column_util = np.ones(3, float) * competition.OVERSHOOT_SCORE
+            column_util = np.ones(3, float) * self.OVERSHOOT_UTIL
             for c in available_columns:
                 next_occupancy = occupancy.copy()
                 next_occupancy[c] += 1
