@@ -13,6 +13,8 @@ from src.agents.util_agent import UtilAgent
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(levelname)-5s %(asctime)-15s %(name)s:%(funcName)s - %(message)s', stream=sys.stdout)
+    logging.getLogger("matplotlib").setLevel(logging.INFO)
+
     num_games = 1000
     competition = Competition(num_games)
 
@@ -36,6 +38,4 @@ if __name__ == '__main__':
     competition.printResult()
     # competition.plot_score_history()
     competition.plot_histogram()
-
-    mean_scores = {p.agent.agentName: np.mean([-1000 if s > 1000 else s for s in p.score_history]) for p in competition.participants}
-    pprint(mean_scores, width=1)
+    competition.printMeanScores()

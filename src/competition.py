@@ -3,6 +3,7 @@ import random
 from typing import List
 import matplotlib.pyplot as plt
 import numpy as np
+from pprint import pprint
 
 from src.agents import MatrixColumn, Agent
 epsilon = 1e-10
@@ -87,7 +88,7 @@ class Participant:
             self.game_stats['games_won'] += 1 
         elif rank == -1:
             self.score += -3
-            self.game_stats['overbought'] += 1
+            self.game_stats['failed'] += 1
         else:
             self.game_stats['games_lost'] += 1
 
@@ -112,16 +113,22 @@ class Competition:
                     participant.doMove(diceValue)
 
             # evaluate game
-            ranking = []
+            ranked_participants = []
             for participant in self.participants:
                 result = participant.getGameResult()
                 if result > 1000:
                     participant.finishGame(rank=-1)
                 else:
-                    ranking.append((participant, result))
-            ranking = sorted(ranking, key=lambda x: x[1], reverse=True)
-            for rank, (participant, _) in enumerate(ranking):
-                participant.finishGame(rank+1)
+                    ranked_participants.append((participant, result))
+            ranked_participants = sorted(ranked_participants, key=lambda x: x[1], reverse=True)
+            rank = 1
+            prevScore = None
+            for participant, score in ranked_participants:
+                if prevScore is not None:
+                    if score != prevScore:
+                        rank += 1
+                participant.finishGame(rank)
+                prevScore = score
 
     def registerParticipant(self, agent: Agent):
         self.participants.append(Participant(agent))
@@ -151,3 +158,8 @@ class Competition:
         plt.vlines(x=1000, ymin=0, ymax=plt.ylim()[1], colors='black')
         plt.legend()
         plt.show()
+
+    def printMeanScores(self):
+        print("Mean scores achieved by the agents:")
+        mean_scores = {p.agent.agentName: np.mean([-1000 if s > 1000 else s for s in p.score_history]) for p in self.participants}
+        pprint(mean_scores, width=1)
