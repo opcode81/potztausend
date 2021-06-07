@@ -2,12 +2,15 @@ import os
 import random
 from typing import Callable
 
+import numpy as np
 from PyQt5.QtGui import QPixmap, QFont, QIcon
-from PyQt5.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget, QGroupBox
+from PyQt5.QtWidgets import QGridLayout, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget, QGroupBox, QApplication
 
 from src.agents import MonteCarloAgent, TemporalDifferenceAgent, QLearningAgent, CalculatorAgent, RandomAgent
 from src.agents.util_agent import UtilAgent
 from src.competition import Participant
+
+FONT_SIZE = 14
 
 
 class PotztausendApp(QWidget):
@@ -23,15 +26,41 @@ class PotztausendApp(QWidget):
         layout.addWidget(self.ControlWidget(lambda diceValue: self._diced(diceValue), self._startGame))
         self.agentWidgets = []
 
+        font = self.font()
+        font.setPointSize(FONT_SIZE)
+        QApplication.instance().setFont(font)
+
+        i = 0
+        hLayout = None
         for p in participants:
+
+            if i % 2 == 0:
+                hLayout = QHBoxLayout()
+                hWidget = QWidget()
+                hWidget.setLayout(hLayout)
+                layout.addWidget(hWidget)
+
             agentWidget = self.AgentWidget(p)
             self.agentWidgets.append(agentWidget)
-            layout.addWidget(agentWidget)
+            hLayout.addWidget(agentWidget)
+            #layout.addWidget(agentWidget)
+            i += 1
 
         self.setLayout(layout)
         self.resize(300, 150)
         self.setWindowTitle("Potztausend")
         self.setWindowIcon(QIcon(os.path.join("app_resources", "fuenf.png")))
+
+        self._playTestRound()
+
+    def _playTestRound(self):
+        for agentView in self.agentWidgets:
+            agentView.participant.startGame()
+        for d in np.random.randint(1, 7, 8):
+            for agentView in self.agentWidgets:
+                agentView.participant.doMove(d)
+        for agentView in self.agentWidgets:
+            agentView.participant.startGame()
 
     def _diced(self, value):
         for agentView in self.agentWidgets:
@@ -134,6 +163,7 @@ class PotztausendApp(QWidget):
                 self.movedCallback = movedCallback
                 layout = QVBoxLayout()
                 gameField = QWidget()
+                gameField.setFixedSize(200, 200)
                 gameFieldLayout = QGridLayout()
                 self.fields = []
 
@@ -175,7 +205,7 @@ class PotztausendApp(QWidget):
                     self.fields[index].setEnabled(False)
                     if index % 3 == 0:
                         multiplier = 100
-                    elif index % 2 == 1:
+                    elif index % 3 == 1:
                         multiplier = 10
                     else:
                         multiplier = 1
