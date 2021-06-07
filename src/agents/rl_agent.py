@@ -52,12 +52,13 @@ class State:
 
 
 class QLearningAgent(Agent):
-    def __init__(self):
-        super().__init__("Paul")
-        path = os.path.join("model_resources", "paul", "qtable.pickle")
+    def __init__(self, name="Paul"):
+        super().__init__(name)
+        path = os.path.join("model_resources", "paul", "q.pickle")
         with open(path, "rb") as f:
             self.qTable = pickle.load(f)
         self.state = None
+        self.rand = random.Random(42)
 
     def startGame(self):
         self.state = State()
@@ -66,7 +67,7 @@ class QLearningAgent(Agent):
         possibleActions = [a.value for a in self.state.getPossibleActions()]
         stateIndex = self.state.toIndex()
         bestPossibleActionValue = np.max(self.qTable[stateIndex, diceValue - 1, possibleActions])
-        bestPossibleAction = possibleActions[random.choice(np.where(self.qTable[stateIndex, diceValue - 1, possibleActions] == bestPossibleActionValue)[0])]
+        bestPossibleAction = possibleActions[self.rand.choice(np.where(self.qTable[stateIndex, diceValue - 1, possibleActions] == bestPossibleActionValue)[0])]
         self.state.performAction(bestPossibleAction, diceValue)
         return MatrixColumn(bestPossibleAction)
 
@@ -74,7 +75,7 @@ class QLearningAgent(Agent):
 class TemporalDifferenceAgent(Agent):
     def __init__(self):
         super().__init__("Gunter")
-        path = os.path.join("model_resources", "gunter", "v-td.pickle")
+        path = os.path.join("model_resources", "gunter", "v.pickle")
         with open(path, "rb") as f:
             self.vTable = pickle.load(f)
         self.state = None
@@ -98,7 +99,7 @@ class TemporalDifferenceAgent(Agent):
         return MatrixColumn(bestAction)
 
 
-class ValueIterationAgent(Agent):
+class MonteCarloAgent(Agent):
     def __init__(self):
         super().__init__("Lotte")
         path = os.path.join("model_resources", "lotte", "v.pickle")

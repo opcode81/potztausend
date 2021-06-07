@@ -1,15 +1,10 @@
 import logging
-from pprint import pprint
 import sys
-
-import numpy as np
-
-from src import Competition
-from src.agents import RandomAgent, CalculatorAgent, QLearningAgent, TemporalDifferenceAgent, ValueIterationAgent
 from time import time
 
+from src import Competition
+from src.agents import RandomAgent, CalculatorAgent, QLearningAgent, TemporalDifferenceAgent, MonteCarloAgent
 from src.agents.util_agent import UtilAgent
-
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(levelname)-5s %(asctime)-15s %(name)s:%(funcName)s - %(message)s', stream=sys.stdout)
@@ -22,14 +17,14 @@ if __name__ == '__main__':
     sheldon = CalculatorAgent()
     paul = QLearningAgent()
     gunter = TemporalDifferenceAgent()
-    lotte = ValueIterationAgent()
+    lotte = MonteCarloAgent()
     jeremy = UtilAgent()
-    #competition.registerParticipant(randy)
+    competition.registerParticipant(randy)
+    competition.registerParticipant(gunter)
+    competition.registerParticipant(lotte)
+    competition.registerParticipant(jeremy)
     competition.registerParticipant(sheldon)
     competition.registerParticipant(paul)
-    #competition.registerParticipant(gunter)
-    #competition.registerParticipant(lotte)
-    competition.registerParticipant(jeremy)
 
     start_time = time()
     competition.startCompetition()

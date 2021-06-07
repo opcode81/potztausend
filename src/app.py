@@ -5,7 +5,7 @@ from typing import Callable
 from PyQt5.QtGui import QPixmap, QFont, QIcon
 from PyQt5.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget, QGroupBox
 
-from src.agents import ValueIterationAgent, TemporalDifferenceAgent, QLearningAgent, CalculatorAgent, RandomAgent
+from src.agents import MonteCarloAgent, TemporalDifferenceAgent, QLearningAgent, CalculatorAgent, RandomAgent
 from src.agents.util_agent import UtilAgent
 from src.competition import Participant
 
@@ -14,7 +14,7 @@ class PotztausendApp(QWidget):
     def __init__(self):
         super().__init__()
         participants = [Participant(TemporalDifferenceAgent()),
-                        Participant(ValueIterationAgent()),
+                        Participant(MonteCarloAgent()),
                         Participant(QLearningAgent()),
                         Participant(UtilAgent()),
                         Participant(CalculatorAgent()),
