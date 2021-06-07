@@ -34,3 +34,7 @@ if __name__ == '__main__':
     # competition.plot_score_history()
     competition.plot_histogram()
     competition.printMeanScores()
+
+    for p in competition.participants:
+        competition.plotScoreHistoryForParticipant(p)
+

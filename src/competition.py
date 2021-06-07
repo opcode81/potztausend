@@ -3,9 +3,9 @@ import random
 from typing import List
 import matplotlib.pyplot as plt
 import numpy as np
-from pprint import pprint
 
-from src.agents import MatrixColumn, Agent
+
+from .agents import MatrixColumn, Agent
 epsilon = 1e-10
 e_inf = 1.0/epsilon
 
@@ -36,6 +36,17 @@ class GameState:
         s += sum(self.stateLines[MatrixColumn.MIDDLE_COLUMN]) * 10
         s += sum(self.stateLines[MatrixColumn.RIGHT_COLUMN])
         return s
+
+    def stateToList(self):
+        stateList = []
+        firstLine = self.stateLines.get(MatrixColumn.LEFT_COLUMN)
+        secondLine = self.stateLines.get(MatrixColumn.MIDDLE_COLUMN)
+        thirdLine = self.stateLines.get(MatrixColumn.RIGHT_COLUMN)
+        for row in range(0, 3):
+            stateList.append(firstLine[row] if row < len(firstLine) else 0)
+            stateList.append(secondLine[row] if row < len(secondLine) else 0)
+            stateList.append(thirdLine[row] if row < len(thirdLine) else 0)
+        return stateList
 
     def __str__(self):
         rows = []
@@ -101,6 +112,7 @@ class Participant:
                 self.game_stats['games_won'] += 1
             else:
                 self.game_stats['games_lost'] += 1
+
 
 class Competition:
     def __init__(self, numberOfGames: int = 10000, randomSeed=42):
@@ -168,6 +180,15 @@ class Competition:
                 bins=np.linspace(329, 1897, 15)) # aligns bin bound on 1000
         plt.vlines(x=1000, ymin=0, ymax=plt.ylim()[1], colors='black')
         plt.legend()
+        plt.show()
+
+    @staticmethod
+    def plotScoreHistoryForParticipant(p: Participant):
+        plt.figure()
+        plt.hist(p.sum_history, color="grey", bins=np.linspace(329, 1897, 15))
+        plt.vlines(x=1000, ymin=0, ymax=5000, colors='black')
+        plt.title(p.agent.agentName)
+        plt.xlabel("score")
         plt.show()
 
     def printMeanScores(self):
