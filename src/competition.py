@@ -12,6 +12,7 @@ e_inf = 1.0/epsilon
 log = logging.getLogger(__name__)
 
 OVERSHOOT_SCORE = -1000
+INVALID_MOVE_SCORE = -10000
 
 
 class GameState:
@@ -20,6 +21,7 @@ class GameState:
                 MatrixColumn.LEFT_COLUMN: [],
                 MatrixColumn.MIDDLE_COLUMN: [],
                 MatrixColumn.RIGHT_COLUMN: []}
+        self.invalidActionPerformed = False
 
     def getPossibleActions(self) -> List[MatrixColumn]:
         actions = []
@@ -29,7 +31,10 @@ class GameState:
         return actions
 
     def performAction(self, action: MatrixColumn, diceValue: int):
-        self.stateLines.get(action).append(diceValue)
+        if not self.invalidActionPerformed and action in self.getPossibleActions():
+            self.stateLines.get(action).append(diceValue)
+        else:
+            self.invalidActionPerformed = True
 
     def calcSum(self) -> int:
         s = sum(self.stateLines[MatrixColumn.LEFT_COLUMN]) * 100
@@ -63,32 +68,36 @@ class Participant:
     def __init__(self, agent: Agent):
         self.agent = agent
         self.state = GameState()
-        self.invalid = False
         self.points = 0
         self.sum_history = []
-        self.game_stats = {'games_won': 0, 'games_lost': 0, 'failed': 0}
+        self.score_history = []
+        self.game_stats = {'games_won': 0, 'overshot': 0, 'invalid_moves': 0}
 
     def startGame(self):
         self.state = GameState()
         self.agent.startGame()
 
     def doMove(self, diceValue: int):
-        if not self.invalid:
-            action = self.agent.doMove(diceValue)
-            if action in self.state.getPossibleActions():
-                self.state.performAction(action, diceValue)
-            else:
-                self.invalid = True
-                self.points = 0
+        action = self.agent.doMove(diceValue)
+        self.state.performAction(action, diceValue)
 
     def getGameResult(self) -> int:
-        return self.state.calcSum()
+        """
+        :return: the sum achieved by the agent in this game or 0 if the agent performed an invalid action
+        """
+        if self.state.invalidActionPerformed:
+            return 0
+        else:
+            return self.state.calcSum()
 
     def getPoints(self) -> int:
+        """
+        :return: the agent's league points
+        """
         return self.points
 
     def getScores(self) -> List[float]:
-        return [OVERSHOOT_SCORE if s > 1000 else s for s in self.sum_history]
+        return self.score_history
 
     def getMeanScore(self) -> float:
         return np.mean(self.getScores())
@@ -98,20 +107,30 @@ class Participant:
         Parameters
         ----------
         rank : int
-            rank == -1 if overbought
+            rank == -2 if agent performed an invalid move
+            rank == -1 if overshot target of 1000
             rank == 1 if win
-            rank > 1 else
+            rank > 1 otherwise
         """
-        self.sum_history.append(abs(self.getGameResult()))
+        s = self.getGameResult()
+        if rank == -2:
+            score = INVALID_MOVE_SCORE
+        elif rank == -1:
+            score = OVERSHOOT_SCORE
+        else:
+            score = s
+        self.sum_history.append(s)
+        self.score_history.append(score)
+        if rank == -2:
+            self.points += -9
+            self.game_stats['invalid_moves'] += 1
         if rank == -1:
             self.points += -3
-            self.game_stats['failed'] += 1
+            self.game_stats['overshot'] += 1
         else:
             self.points += {1: 5, 2: 3, 3: 1}.get(rank, 0)
             if rank == 1:
                 self.game_stats['games_won'] += 1
-            else:
-                self.game_stats['games_lost'] += 1
 
 
 class Competition:
@@ -137,11 +156,14 @@ class Competition:
             # evaluate game
             ranked_participants = []
             for participant in self.participants:
-                result = participant.getGameResult()
-                if result > 1000:
-                    participant.finishGame(rank=-1)
+                if participant.state.invalidActionPerformed:
+                    participant.finishGame(rank=-2)
                 else:
-                    ranked_participants.append((participant, result))
+                    result = participant.getGameResult()
+                    if result > 1000:
+                        participant.finishGame(rank=-1)
+                    else:
+                        ranked_participants.append((participant, result))
             ranked_participants = sorted(ranked_participants, key=lambda x: x[1], reverse=True)
             rank = 1
             prevScore = None
@@ -156,13 +178,10 @@ class Competition:
         self.participants.append(Participant(agent))
 
     def printLeagueResult(self):
-        self.participants = sorted(self.participants, key=lambda x: x.getPoints() - x.invalid * e_inf, reverse=True)
+        self.participants = sorted(self.participants, key=lambda x: x.getPoints(), reverse=True)
         print("League results:")
         for rank, participant in enumerate(self.participants, start=1):
-            if participant.invalid:
-                print(f"\t {participant.agent.agentName}: disqualified")
-            else:
-                print(f"Rank #{rank}\t {participant.agent.agentName:10s} {participant.getPoints():-6d} points\tgames won: {participant.game_stats['games_won']}, failed: {participant.game_stats['failed']}")
+            print(f"Rank #{rank}\t {participant.agent.agentName:10s} {participant.getPoints():-6d} points\t{participant.game_stats}")
 
     def plot_score_history(self):
         plt.figure()
