@@ -1,9 +1,10 @@
-import pickle
 import os
+from abc import ABC, abstractmethod
 
 import gym
 import numpy as np
-from stable_baselines3 import A2C
+from stable_baselines3 import A2C, DQN
+from stable_baselines3.common.base_class import BaseAlgorithm
 
 import competition
 from agents import MatrixColumn, Agent
@@ -59,14 +60,18 @@ class Env(gym.Env):
             return str(self.state)
 
 
-class DeepRLAgent(Agent):
-    def __init__(self, load=False):
+class DeepRLAgent(Agent, ABC):
+    def __init__(self, load: bool, filebasename: str):
         self.env = Env()
-        self.path = os.path.join("model_resources", "deep_rl", "a2c.zip")
-        self.model = A2C('MlpPolicy', self.env, verbose=1)
+        self.path = os.path.join("model_resources", "deep_rl", f"{filebasename}.zip")
+        self.model = self._createModel(self.env)
         if load:
             self.model = self.model.load(self.path)
         super().__init__(self.__class__.__name__)
+
+    @abstractmethod
+    def _createModel(self, env: Env) -> BaseAlgorithm:
+        pass
 
     def train(self, total_timesteps):
         self.model.learn(total_timesteps=total_timesteps)
@@ -83,8 +88,26 @@ class DeepRLAgent(Agent):
         return MatrixColumn(action)
 
 
+class A2CAgent(DeepRLAgent):
+    def __init__(self, load=False):
+        super().__init__(load, "a2c")
+
+    def _createModel(self, env) -> BaseAlgorithm:
+        return A2C('MlpPolicy', env, verbose=1)
+
+
+class DQNAgent(DeepRLAgent):
+    def __init__(self, load=False):
+        super().__init__(load, "dqn")
+
+    def _createModel(self, env) -> BaseAlgorithm:
+        return DQN('MlpPolicy', env, verbose=1)
+
+
 if __name__ == '__main__':
-    agent = DeepRLAgent()
+    #agent = A2CAgent()
+    agent = DQNAgent()
+
     agent.train(1000000)
     #agent.save()
 
