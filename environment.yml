@@ -1,0 +1,7 @@
+name: potztausend
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9.12
+  - stable-baselines3=1.4.0
