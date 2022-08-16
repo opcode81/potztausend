@@ -1,5 +1,6 @@
 import logging
 import random
+from enum import Enum
 from typing import List
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,12 +17,22 @@ INVALID_MOVE_SCORE = -10000
 
 
 class GameState:
+    class Status(Enum):
+        RUNNING = 0
+        OVER_SUCCESS = 1
+        OVER_OVERSHOOT = 2
+        OVER_INVALID_MOVE = 3
+
+        def isOver(self):
+            return self != self.RUNNING
+
     def __init__(self):
         self.stateLines = {
                 MatrixColumn.LEFT_COLUMN: [],
                 MatrixColumn.MIDDLE_COLUMN: [],
                 MatrixColumn.RIGHT_COLUMN: []}
         self.invalidActionPerformed = False
+        self.numbersPlaced = 0
 
     def getPossibleActions(self) -> List[MatrixColumn]:
         actions = []
@@ -31,10 +42,26 @@ class GameState:
         return actions
 
     def performAction(self, action: MatrixColumn, diceValue: int):
-        if not self.invalidActionPerformed and action in self.getPossibleActions():
-            self.stateLines.get(action).append(diceValue)
+        if not self.invalidActionPerformed:
+            stateLine = self.stateLines[action]
+            if len(stateLine) < 3:
+                stateLine.append(diceValue)
+                self.numbersPlaced += 1
+            else:
+                self.invalidActionPerformed = True
+
+    def getGameStatus(self) -> Status:
+        if self.invalidActionPerformed:
+            return self.Status.OVER_INVALID_MOVE
+        elif self.calcSum() > 1000:
+            return self.Status.OVER_OVERSHOOT
+        elif self.numbersPlaced == 9:
+            return self.Status.OVER_SUCCESS
         else:
-            self.invalidActionPerformed = True
+            return self.Status.RUNNING
+
+    def isGameOver(self):
+        return self.getGameStatus().isOver()
 
     def calcSum(self) -> int:
         s = sum(self.stateLines[MatrixColumn.LEFT_COLUMN]) * 100
@@ -77,6 +104,9 @@ class Participant:
         self.state = GameState()
         self.agent.startGame()
 
+    def isGameOver(self):
+        return self.state.isGameOver()
+
     def doMove(self, diceValue: int):
         action = self.agent.doMove(diceValue)
         self.state.performAction(action, diceValue)
@@ -115,6 +145,7 @@ class Participant:
         s = self.getGameResult()
         if rank == -2:
             score = INVALID_MOVE_SCORE
+            s = 0  # set sum to 0 because the value accumulated before invalid move is meaningless
         elif rank == -1:
             score = OVERSHOOT_SCORE
         else:
@@ -149,21 +180,20 @@ class Competition:
             # play game
             for gameRound in range(9):
                 diceValue = self.rand.randint(1, 6)
-
-                for participant in self.participants:
-                    participant.doMove(diceValue)
+                if not participant.isGameOver():
+                    for participant in self.participants:
+                        participant.doMove(diceValue)
 
             # evaluate game
             ranked_participants = []
             for participant in self.participants:
-                if participant.state.invalidActionPerformed:
+                status = participant.state.getGameStatus()
+                if status == GameState.Status.OVER_INVALID_MOVE:
                     participant.finishGame(rank=-2)
+                elif status == GameState.Status.OVER_OVERSHOOT:
+                    participant.finishGame(rank=-1)
                 else:
-                    result = participant.getGameResult()
-                    if result > 1000:
-                        participant.finishGame(rank=-1)
-                    else:
-                        ranked_participants.append((participant, result))
+                    ranked_participants.append((participant, participant.state.calcSum()))
             ranked_participants = sorted(ranked_participants, key=lambda x: x[1], reverse=True)
             rank = 1
             prevScore = None
@@ -183,29 +213,41 @@ class Competition:
         for rank, participant in enumerate(self.participants, start=1):
             print(f"Rank #{rank}\t {participant.agent.agentName:10s} {participant.getPoints():-6d} points\t{participant.game_stats}")
 
-    def plot_score_history(self):
+    def _plotAgentHistory(self, datafn):
         plt.figure()
         for participant in self.participants:
-            plt.plot(participant.sum_history, label=participant.agent.agentName)
+            plt.plot(datafn(participant), label=participant.agent.agentName)
         plt.legend()
         plt.show()
 
-    def plot_histogram(self):
+    def plotAgentSumHistory(self):
+        self._plotAgentHistory(lambda participant: participant.sum_history)
+
+    def plotCombinedSumHistogram(self):
         plt.figure()
         for participant in self.participants:
             plt.hist(participant.sum_history,
                 label=participant.agent.agentName, 
                 alpha=0.5, 
                 bins=np.linspace(329, 1897, 15)) # aligns bin bound on 1000
+
         plt.vlines(x=1000, ymin=0, ymax=plt.ylim()[1], colors='black')
         plt.legend()
         plt.show()
 
+    def plotParticipantSumHistograms(self):
+        for p in self.participants:
+            self.plotSumHistogramForParticipant(p)
+
     @staticmethod
-    def plotScoreHistoryForParticipant(p: Participant):
+    def plotSumHistogramForParticipant(p: Participant):
         plt.figure()
-        plt.hist(p.sum_history, color="grey", bins=np.linspace(329, 1897, 15))
-        plt.vlines(x=1000, ymin=0, ymax=5000, colors='black')
+        if np.min(p.sum_history) == 0:  # agent used invalid moves
+            bins = np.linspace(0, 1901, 20)
+        else:
+            bins = np.linspace(301, 1901, 17)  # true range is 333 to 999+900, modified to ensure 1000 is a bin boundary
+        plt.hist(p.sum_history, color="grey", bins=bins)
+        plt.vlines(x=1000, ymin=0, ymax=plt.ylim()[1], colors='black')
         plt.title(p.agent.agentName)
         plt.xlabel("score")
         plt.show()
