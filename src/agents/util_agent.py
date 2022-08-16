@@ -5,7 +5,7 @@ from typing import Tuple
 import numpy as np
 
 from .agent import Agent, MatrixColumn
-from .. import competition
+import competition
 
 
 class UtilAgent(Agent):

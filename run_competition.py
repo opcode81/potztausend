@@ -2,9 +2,9 @@ import logging
 import sys
 from time import time
 
-from src import Competition
-from src.agents import RandomAgent, CalculatorAgent, QLearningAgent, TemporalDifferenceAgent, MonteCarloAgent
-from src.agents.util_agent import UtilAgent
+from competition import Competition
+from agents import RandomAgent, CalculatorAgent, QLearningAgent, TemporalDifferenceAgent, MonteCarloAgent
+from agents.util_agent import UtilAgent
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(levelname)-5s %(asctime)-15s %(name)s:%(funcName)s - %(message)s', stream=sys.stdout)

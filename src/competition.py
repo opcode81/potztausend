@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-from .agents import MatrixColumn, Agent
+from agents import MatrixColumn, Agent
 epsilon = 1e-10
 e_inf = 1.0/epsilon
 
