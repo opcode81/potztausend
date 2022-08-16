@@ -17,7 +17,7 @@ class Env(gym.Env):
     def __init__(self):
         self.state = GameState()
         self.diceValue = 0
-        self.observation_space = gym.spaces.Box(0, 1.0, shape=[7])
+        self.observation_space = gym.spaces.Box(-1.0, 1.0, shape=[6])
         self.rand = np.random.RandomState()
         self.action_space = gym.spaces.Discrete(3)
 
@@ -26,9 +26,11 @@ class Env(gym.Env):
             diceValue = self.rand.randint(1, 7)
         self.diceValue = diceValue
         remainingActionsPerCol = [(3 - len(self.state.stateLines[c])) / 3 for c in MatrixColumn]
-        numNorm = 1000
-        columnValues = [self.diceValue/numNorm, self.diceValue*10/numNorm, self.diceValue*100/numNorm]
-        return np.array([*columnValues, self.state.calcSum()/numNorm, *remainingActionsPerCol])
+        target = 1000
+        s = self.state.calcSum()
+        resultingValues = [s + self.diceValue, s + self.diceValue*10, s + self.diceValue*100]
+        resultingValuesNorm = [(x - target) / target for x in resultingValues]
+        return np.array([*resultingValuesNorm, *remainingActionsPerCol])
 
     def reset(self):
         self.state = GameState()
